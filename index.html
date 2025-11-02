@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Articulation Points & Bridges Visualizer</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔍 Graph Articulation Visualizer</h1>
+            <p class="subtitle">Interactive DFS-based Articulation Points & Bridges Detection</p>
+        </header>
+
+        <div class="content">
+            <div class="controls">
+                <div class="mode-indicator" id="modeIndicator">Mode: Add Vertices</div>
+
+                <div class="control-section">
+                    <h3>Graph Creation</h3>
+                    <button class="secondary-btn" onclick="setMode('vertex')">Add Vertices</button>
+                    <button class="secondary-btn" onclick="setMode('edge')">Add Edges</button>
+                    <button class="secondary-btn" onclick="setMode('delete')">Delete Mode</button>
+                </div>
+
+                <div class="control-section">
+                    <h3>Algorithms</h3>
+                    <button class="primary-btn" onclick="findArticulationPoints()">Find Articulation Points</button>
+                    <button class="primary-btn" onclick="findBridges()">Find Bridges</button>
+                    <button class="primary-btn" onclick="colorComponents()">Color Components</button>
+                </div>
+
+                <div class="control-section">
+                    <h3>Examples</h3>
+                    <button class="secondary-btn" onclick="loadExample('simple')">Simple Graph</button>
+                    <button class="secondary-btn" onclick="loadExample('complex')">Complex Graph</button>
+                    <button class="danger-btn" onclick="clearGraph()">Clear All</button>
+                </div>
+
+                <div class="info-panel">
+                    <h4>Statistics</h4>
+                    <div class="info-item">Vertices: <strong id="vertexCount">0</strong></div>
+                    <div class="info-item">Edges: <strong id="edgeCount">0</strong></div>
+                    <div class="info-item">Articulation Points: <strong id="apCount">0</strong></div>
+                    <div class="info-item">Bridges: <strong id="bridgeCount">0</strong></div>
+                    <div class="info-item">Components: <strong id="componentCount">0</strong></div>
+                </div>
+
+                <div class="legend">
+                    <h4 style="color: #667eea; margin-bottom: 5px;">Legend</h4>
+                    <div class="legend-item">
+                        <div class="color-box" style="background: #ff4444;"></div>
+                        <span>Articulation Point</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="color-box" style="background: #ff8800;"></div>
+                        <span>Bridge</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="color-box" style="background: #4444ff;"></div>
+                        <span>DFS Tree Edge</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="color-box" style="background: #44ff44;"></div>
+                        <span>Back Edge</span>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <canvas id="canvas" width="1000" height="700"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
