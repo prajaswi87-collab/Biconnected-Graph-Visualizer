@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Articulation Points & Bridges Visualizer</title>
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
@@ -29,7 +29,6 @@
                     <button class="primary-btn" onclick="findArticulationPoints()">Find Articulation Points</button>
                     <button class="primary-btn" onclick="findBridges()">Find Bridges</button>
                     <button class="primary-btn" onclick="colorComponents()">Color Components</button>
-                    <button class="secondary-btn" onclick="resetHighlights()">Reset Highlights</button>
                 </div>
 
                 <div class="control-section">
@@ -68,41 +67,11 @@
                     </div>
                 </div>
             </div>
-
-            <div class="main-area">
+            <div>
                 <canvas id="canvas" width="1000" height="700"></canvas>
-
-                <!-- Pseudocode panel (top-right of canvas) -->
-                <aside class="pseudocode" id="pseudocode">
-<pre><code>/* Tarjan (Articulation Points & Bridges)
-1. Initialize disc[u] = -1, low[u] = 0, time = 0
-2. For each vertex u not visited:
-   DFS(u, parent = -1)
-DFS(u, parent):
-   disc[u] = low[u] = ++time
-   children = 0
-   for v in adj[u]:
-     if disc[v] == -1:
-       children++
-       mark edge (u,v) as tree-edge
-       DFS(v, u)
-       low[u] = min(low[u], low[v])
-       if parent == -1 and children > 1:
-         u is articulation point
-       if parent != -1 and low[v] >= disc[u]:
-         u is articulation point
-       if low[v] > disc[u]:
-         edge (u,v) is bridge
-     else if v != parent:
-       low[u] = min(low[u], disc[v])
-       mark edge (u,v) as back-edge
-*/
-</code></pre>
-                </aside>
             </div>
         </div>
     </div>
-
     <script src="script.js"></script>
 </body>
 </html>
