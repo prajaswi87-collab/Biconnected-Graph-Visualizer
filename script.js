@@ -8,12 +8,12 @@ let selectedVertex = null;
 let vertexIdCounter = 0;
 
 let articulationPoints = new Set();
-let bridges = new Set();
+let bridges = new Set(); // stores "min-max" string keys for edges
 let componentColors = new Map();
-let dfsTreeEdges = new Set();
-let backEdges = new Set();
+let dfsTreeEdges = new Set(); // keys
+let backEdges = new Set(); // keys
 
-// 🟡 New variables for dragging
+// Dragging variables
 let isDragging = false;
 let draggedVertex = null;
 
@@ -28,10 +28,9 @@ function setMode(newMode) {
     document.getElementById('modeIndicator').textContent = modeText[newMode];
 }
 
-// 🖱️ Original click event (slightly tweaked to ignore clicks during drag)
+// Canvas interactions
 canvas.addEventListener('click', (e) => {
-    if (isDragging) return; // Prevent click from triggering when dragging
-
+    if (isDragging) return;
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
@@ -45,7 +44,6 @@ canvas.addEventListener('click', (e) => {
     }
 });
 
-// 🖐️ New drag events
 canvas.addEventListener('mousedown', (e) => {
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -78,13 +76,9 @@ canvas.addEventListener('mouseup', () => {
     draggedVertex = null;
 });
 
+// Vertex/edge operations
 function addVertex(x, y) {
-    const vertex = {
-        id: vertexIdCounter++,
-        x: x,
-        y: y,
-        label: vertices.length
-    };
+    const vertex = { id: vertexIdCounter++, x: x, y: y, label: vertices.length };
     vertices.push(vertex);
     updateStats();
     draw();
@@ -121,6 +115,7 @@ function handleDelete(x, y) {
     if (vertex) {
         vertices = vertices.filter(v => v.id !== vertex.id);
         edges = edges.filter(e => e.v1.id !== vertex.id && e.v2.id !== vertex.id);
+        // reset indices/labels optionally left as-is
         updateStats();
         draw();
         return;
@@ -163,53 +158,183 @@ function distanceToSegment(px, py, x1, y1, x2, y2) {
     return Math.sqrt((px - projX) ** 2 + (py - projY) ** 2);
 }
 
-// 🧠 Graph algorithms (unchanged)
+// adjacency builder
 function buildAdjacencyList() {
     const adj = new Map();
     vertices.forEach(v => adj.set(v.id, []));
     edges.forEach(e => {
+        if (!adj.has(e.v1.id) || !adj.has(e.v2.id)) return;
         adj.get(e.v1.id).push(e.v2.id);
         adj.get(e.v2.id).push(e.v1.id);
     });
     return adj;
 }
 
-// === articulationPoints, findBridges, colorComponents stay exactly as before ===
-// (I’m not repeating them since no changes are needed in logic)
+// Utilities for edge key
+function edgeKey(a, b) {
+    return `${Math.min(a, b)}-${Math.max(a, b)}`;
+}
 
-// 🎨 Modified draw() to add glow effect when dragging
+// Tarjan's algorithm implementation
+function resetSearchState() {
+    articulationPoints.clear();
+    bridges.clear();
+    dfsTreeEdges.clear();
+    backEdges.clear();
+    componentColors.clear();
+}
+
+function findArticulationPoints() {
+    resetSearchState();
+
+    const adj = buildAdjacencyList();
+    const n = vertices.length;
+    const disc = new Map();
+    const low = new Map();
+    const parent = new Map();
+    let time = 0;
+
+    vertices.forEach(v => {
+        disc.set(v.id, -1);
+        low.set(v.id, Infinity);
+        parent.set(v.id, -1);
+    });
+
+    function dfs(u) {
+        disc.set(u, ++time);
+        low.set(u, disc.get(u));
+        let children = 0;
+
+        const neighbors = adj.get(u) || [];
+        for (let v of neighbors) {
+            const key = edgeKey(u, v);
+            if (disc.get(v) === -1) {
+                children++;
+                parent.set(v, u);
+                dfsTreeEdges.add(key);
+                dfs(v);
+
+                low.set(u, Math.min(low.get(u), low.get(v)));
+
+                if (parent.get(u) === -1 && children > 1) {
+                    articulationPoints.add(u);
+                }
+                if (parent.get(u) !== -1 && low.get(v) >= disc.get(u)) {
+                    articulationPoints.add(u);
+                }
+                if (low.get(v) > disc.get(u)) {
+                    bridges.add(key);
+                }
+            } else if (v !== parent.get(u)) {
+                // back edge
+                backEdges.add(key);
+                low.set(u, Math.min(low.get(u), disc.get(v)));
+            }
+        }
+    }
+
+    // run DFS for each component
+    for (let v of vertices) {
+        if (disc.get(v.id) === -1) {
+            dfs(v.id);
+        }
+    }
+
+    updateStats();
+    draw();
+}
+
+function findBridges() {
+    // Tarjan already sets bridges in findArticulationPoints; but ensure it's computed
+    findArticulationPoints(); // will compute both APs and bridges
+    // draw will reflect bridges
+}
+
+// Color connected components
+function colorComponents() {
+    // compute connected components
+    componentColors.clear();
+    const adj = buildAdjacencyList();
+    const visited = new Set();
+    const palette = [
+        '#fee2e2', '#feeccf', '#fef3c7', '#ecfccb', '#d1fae5',
+        '#dbeafe', '#e9d5ff', '#ffe4f0', '#f0f9ff', '#e6fffb'
+    ];
+
+    let colorIndex = 0;
+
+    function bfs(startId) {
+        const q = [startId];
+        visited.add(startId);
+        const comp = [];
+        while (q.length) {
+            const u = q.shift();
+            comp.push(u);
+            const nbrs = adj.get(u) || [];
+            for (let v of nbrs) {
+                if (!visited.has(v)) {
+                    visited.add(v);
+                    q.push(v);
+                }
+            }
+        }
+        const color = palette[colorIndex % palette.length];
+        colorIndex++;
+        comp.forEach(id => componentColors.set(id, color));
+    }
+
+    for (let v of vertices) {
+        if (!visited.has(v.id)) {
+            bfs(v.id);
+        }
+    }
+
+    updateStats();
+    draw();
+}
+
+function resetHighlights() {
+    articulationPoints.clear();
+    bridges.clear();
+    dfsTreeEdges.clear();
+    backEdges.clear();
+    componentColors.clear();
+    updateStats();
+    draw();
+}
+
+// drawing
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    // draw edges
     edges.forEach(e => {
-        const edgeKey = `${Math.min(e.v1.id, e.v2.id)}-${Math.max(e.v1.id, e.v2.id)}`;
-
+        const key = edgeKey(e.v1.id, e.v2.id);
         ctx.beginPath();
         ctx.moveTo(e.v1.x, e.v1.y);
         ctx.lineTo(e.v2.x, e.v2.y);
 
-        if (bridges.has(edgeKey)) {
+        if (bridges.has(key)) {
             ctx.strokeStyle = '#ff8800';
             ctx.lineWidth = 5;
-        } else if (dfsTreeEdges.has(edgeKey)) {
+        } else if (dfsTreeEdges.has(key)) {
             ctx.strokeStyle = '#4444ff';
             ctx.lineWidth = 3;
-        } else if (backEdges.has(edgeKey)) {
+        } else if (backEdges.has(key)) {
             ctx.strokeStyle = '#44ff44';
             ctx.lineWidth = 3;
         } else {
             ctx.strokeStyle = '#333';
             ctx.lineWidth = 2;
         }
-
         ctx.stroke();
     });
 
+    // draw vertices
     vertices.forEach(v => {
         ctx.beginPath();
         ctx.arc(v.x, v.y, 20, 0, Math.PI * 2);
 
-        // 🟡 If being dragged, glow yellow
         if (v === draggedVertex) {
             ctx.shadowColor = 'yellow';
             ctx.shadowBlur = 20;
@@ -236,7 +361,7 @@ function draw() {
         ctx.textBaseline = 'middle';
         ctx.fillText(v.label, v.x, v.y);
 
-        ctx.shadowBlur = 0; // reset glow
+        ctx.shadowBlur = 0;
     });
 }
 
@@ -253,17 +378,14 @@ function updateStats() {
 function clearGraph() {
     vertices = [];
     edges = [];
-    articulationPoints.clear();
-    bridges.clear();
-    componentColors.clear();
-    dfsTreeEdges.clear();
-    backEdges.clear();
+    resetSearchState();
     selectedVertex = null;
     vertexIdCounter = 0;
     updateStats();
     draw();
 }
 
+// Examples
 function loadExample(type) {
     clearGraph();
 
@@ -310,5 +432,6 @@ function loadExample(type) {
     draw();
 }
 
+// init
 updateStats();
 draw();
